@@ -7,7 +7,14 @@ import random
 import glob
 import sys
 
-
+#Analogamente al Dataset RGB, la creazione di un oggetto Dataset utilizza questo metodo con le docute differenze:
+#-attraversa tutti i percorsi dei flow 2d ("flow_x_processed and flow_y_processed → x and y Warp Flow data") 
+#di ogni video per ogni classe
+#-DatasetX memorizza il path relativo al flow_x di un determinato video 
+#-DatasetY "         "   "    "       "  flow_y "  "  "             " 
+#-Labels memorizza la classe relativa ad ogni video 
+#-NumFrames memorizza il numero di frame di ogni video
+#-Come in Dataset RGB, ogni video ha il suo indice 
 def gen_split(root_dir, stackSize):
     DatasetX = []
     DatasetY = []
@@ -42,24 +49,33 @@ class makeDataset(Dataset):
             transform (callable, optional): Optional transform to be applied
                 on a sample.
         """
-        self.imagesX, self.imagesY, self.labels, self.numFrames = gen_split(root_dir, stackSize)
-        self.spatial_transform = spatial_transform
-        self.train = train
-        self.numSeg = numSeg
-        self.sequence = sequence
-        self.stackSize = stackSize
-        self.fmt = fmt
-        self.phase = phase
+        self.imagesX, self.imagesY, self.labels, self.numFrames = gen_split(root_dir, stackSize) #memorizazione dati, vedi sopra
+        self.spatial_transform = spatial_transform #trasformazione geometrica opzionale per data augmentation 
+        self.train = train #di default settato a train, la modalità viene cambiata in phase
+        self.numSeg = numSeg #numero sequenze, di deaflut a 1
+        self.sequence = sequence #booleano se ho sequenze o meno, di default falso (vedi meglio, passaggio non chiaro)
+        self.stackSize = stackSize #dimensione del mio stack di optical flow images 
+        self.fmt = fmt #formato delle immagini, "jpeg"
+        self.phase = phase #fase che permette di settare la modalità di train o test 
 
     def __len__(self):
         return len(self.imagesX)
+    
+#Quando viene preso un video, si vanno a valutare i dati flow per capire come fare lo stack di optical flow images 
+#PREMESSA : non mi è ben chiara la questione delle sequenze. In base al fato se ho sequenze o meno cambia la scelta del 
+#frame di partenza (cambia anche se sono in fase train)
+#in sostanza: vience preso un video in termini di flow,  in base al frame di partenza e al numero di frame del flow interessato 
+#viene prelevato un numero di frame uguale alla stack size
+#ogni immagine scelta viene aperta, convertita in GreyScale ("L), se è flow_x viene invertita, se è flow_y no
+#queste immagini trasformante vengo salvate nella lista di stacked images inpSeqSegs (stacked optical flow input)
+#viene fatto un nuovo tensore a partire dalla lista di stacked images, con tutte le dimensioni di input uguali a 1 rimosse
 
     def __getitem__(self, idx):
-        vid_nameX = self.imagesX[idx]
-        vid_nameY = self.imagesY[idx]
-        label = self.labels[idx]
-        numFrame = self.numFrames[idx]
-        inpSeqSegs = []
+        vid_nameX = self.imagesX[idx] #percoso flow_x del video il cui indice è idx
+        vid_nameY = self.imagesY[idx] #percorso flow_y " " " " " " 
+        label = self.labels[idx] # classe corrispondente
+        numFrame = self.numFrames[idx] # num frames corrispondente 
+        inpSeqSegs = [] #stacked optical flow input, il goal di tutto ciò è usare una stacked di 5 immagini come input
         self.spatial_transform.randomize_parameters()
         if self.sequence is True:
             if numFrame <= self.stackSize:
