@@ -12,7 +12,7 @@ import sys
 
 def main_run(dataset, trainDir, valDir, outDir, stackSize, trainBatchSize, valBatchSize, numEpochs, lr1,
              decay_factor, decay_step):
-
+#definisce il numero di classi in relazione al dataset in utilizzo
 
     if dataset == 'gtea61':
         num_classes = 61
@@ -27,7 +27,7 @@ def main_run(dataset, trainDir, valDir, outDir, stackSize, trainBatchSize, valBa
         sys.exit()
 
     min_accuracy = 0
-
+#crea la directory e le sotto directory per salvarsi il modello e i file di log ( penso si  tratti di accuracy e loss) 
     model_folder = os.path.join('./', outDir, dataset, 'flow')  # Dir for saving models and log files
     # Create the dir
     if os.path.exists(model_folder):
@@ -42,16 +42,17 @@ def main_run(dataset, trainDir, valDir, outDir, stackSize, trainBatchSize, valBa
     val_log_loss = open((model_folder + '/val_log_loss.txt'), 'w')
     val_log_acc = open((model_folder + '/val_log_acc.txt'), 'w')
 
-
+#Preprocessing e normalizzazione dati secondo il pretraining su ImageNet, fa anche data augmentation, ESATTAMENTE come nel main-run-RGB 
     # Data loader
     normalize = Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 
     spatial_transform = Compose([Scale(256), RandomHorizontalFlip(), MultiScaleCornerCrop([1, 0.875, 0.75, 0.65625], 224),
                                  ToTensor(), normalize])
-
+#creazione oggetto Makedataset in cui ho i tensori di TRAINING warp/flow su X e Y, le labels e il numero di frame(non mi proprio ben chiarissima la differenza, warp penso sia perchè conti
+#la deformazione dovuta al movimento della ego-camera
     vid_seq_train = makeDataset(trainDir, spatial_transform=spatial_transform, sequence=False,
                                 stackSize=stackSize, fmt='.jpg')
-
+#zz
     train_loader = torch.utils.data.DataLoader(vid_seq_train, batch_size=trainBatchSize,
                             shuffle=True, sampler=None, num_workers=4, pin_memory=True)
     if valDir is not None:
