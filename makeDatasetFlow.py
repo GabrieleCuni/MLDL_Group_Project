@@ -7,7 +7,7 @@ import random
 import glob
 import sys
 
-#Analogamente al Dataset RGB, la creazione di un oggetto Dataset utilizza questo metodo con le docute differenze:
+#Analogamente al Dataset RGB, la creazione di un oggetto Dataset utilizza questo metodo con le dovute differenze:
 #-attraversa tutti i percorsi dei flow 2d ("flow_x_processed and flow_y_processed → x and y Warp Flow data") 
 #di ogni video per ogni classe
 #-DatasetX memorizza il path relativo al flow_x di un determinato video 
