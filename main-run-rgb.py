@@ -32,7 +32,8 @@ def main_run(dataset, stage, train_data_dir, val_data_dir, stage1_dict, out_dir,
     # Create the dir
     if os.path.exists(model_folder):
         print('Directory {} exists!'.format(model_folder))
-        sys.exit()
+        !rm -rf ./experiments
+        #sys.exit()
     os.makedirs(model_folder)
 
     # Log files - sono log file, direi che per ora possiamo trascurarli e magari guardarli quando runniamo!
@@ -51,7 +52,7 @@ def main_run(dataset, stage, train_data_dir, val_data_dir, stage1_dict, out_dir,
 	#Make dataset restituisce un oggetto dataset contenente di frame (immagini rgb già aperte con transformation) con relativa label
 	#VEDERE FILE
     vid_seq_train = makeDataset(train_data_dir,
-                                spatial_transform=spatial_transform, seqLen=seqLen, fmt='.jpg')
+                                spatial_transform=spatial_transform, seqLen=seqLen, fmt='.png')
 
     train_loader = torch.utils.data.DataLoader(vid_seq_train, batch_size=trainBatchSize,
                             shuffle=True, num_workers=4, pin_memory=True)
@@ -59,7 +60,7 @@ def main_run(dataset, stage, train_data_dir, val_data_dir, stage1_dict, out_dir,
 		#se il direttorio dei dati di validation esiste fa lo stesso per quei dati
         vid_seq_val = makeDataset(val_data_dir,
                                    spatial_transform=Compose([Scale(256), CenterCrop(224), ToTensor(), normalize]),
-                                   seqLen=seqLen, fmt='.jpg')
+                                   seqLen=seqLen, fmt='.png')
 
         val_loader = torch.utils.data.DataLoader(vid_seq_val, batch_size=valBatchSize,
                                 shuffle=False, num_workers=2, pin_memory=True)
@@ -67,7 +68,8 @@ def main_run(dataset, stage, train_data_dir, val_data_dir, stage1_dict, out_dir,
 
 
     trainInstances = vid_seq_train.__len__()
-	
+    print(f'Train instances: {trainInstances}')
+
 	#Distinzione tra stage 1 e stage 2: nell'1 c'è da trainare solo parte del network quindi inizialmente setta
 	#a false tutti i layer (li freeza), solo successivamente li attiverà per il train - GUARDARE ANCHE ATTENTION MODEL
 	
@@ -237,11 +239,32 @@ def main_run(dataset, stage, train_data_dir, val_data_dir, stage1_dict, out_dir,
 
 
 def __main__():
-	#definisce gli argomenti e glieli passa al main run, se guardate il readme è altrettanto chiaro
+    
     parser = argparse.ArgumentParser()
+
+    #STAGE 1
     parser.add_argument('--dataset', type=str, default='gtea61', help='Dataset')
     parser.add_argument('--stage', type=int, default=1, help='Training stage')
-    parser.add_argument('--trainDatasetDir', type=str, default='./dataset/gtea_warped_flow_61/split2/train',
+    parser.add_argument('--trainDatasetDir', type=str, default='./GTEA61',
+                        help='Train set directory')
+    parser.add_argument('--valDatasetDir', type=str, default=None,
+                        help='Val set directory')
+    parser.add_argument('--outDir', type=str, default='experiments', help='Directory to save results')
+    parser.add_argument('--stage1Dict', type=str, default='./experiments/gtea61/rgb/stage1/best_model_state_dict.pth',
+                        help='Stage 1 model path')
+    parser.add_argument('--seqLen', type=int, default=7, help='Length of sequence')
+    parser.add_argument('--trainBatchSize', type=int, default=32, help='Training batch size')
+    parser.add_argument('--valBatchSize', type=int, default=64, help='Validation batch size')
+    parser.add_argument('--numEpochs', type=int, default=300, help='Number of epochs')
+    parser.add_argument('--lr', type=float, default=1e-3, help='Learning rate')
+    parser.add_argument('--stepSize', type=float, default=[25, 75, 150], nargs="+", help='Learning rate decay step')
+    parser.add_argument('--decayRate', type=float, default=0.1, help='Learning rate decay rate')
+    parser.add_argument('--memSize', type=int, default=512, help='ConvLSTM hidden state size')
+
+    #STAGE 2
+    '''parser.add_argument('--dataset', type=str, default='gtea61', help='Dataset')
+    parser.add_argument('--stage', type=int, default=2, help='Training stage')
+    parser.add_argument('--trainDatasetDir', type=str, default='./GTEA61',
                         help='Train set directory')
     parser.add_argument('--valDatasetDir', type=str, default=None,
                         help='Val set directory')
@@ -251,13 +274,14 @@ def __main__():
     parser.add_argument('--seqLen', type=int, default=25, help='Length of sequence')
     parser.add_argument('--trainBatchSize', type=int, default=32, help='Training batch size')
     parser.add_argument('--valBatchSize', type=int, default=64, help='Validation batch size')
-    parser.add_argument('--numEpochs', type=int, default=300, help='Number of epochs')
-    parser.add_argument('--lr', type=float, default=1e-3, help='Learning rate')
-    parser.add_argument('--stepSize', type=float, default=[25, 75, 150], nargs="+", help='Learning rate decay step')
+    parser.add_argument('--numEpochs', type=int, default=150, help='Number of epochs')
+    parser.add_argument('--lr', type=float, default=1e-4, help='Learning rate')
+    parser.add_argument('--stepSize', type=float, default=[25, 75], nargs="+", help='Learning rate decay step')
     parser.add_argument('--decayRate', type=float, default=0.1, help='Learning rate decay rate')
-    parser.add_argument('--memSize', type=int, default=512, help='ConvLSTM hidden state size')
+    parser.add_argument('--memSize', type=int, default=512, help='ConvLSTM hidden state size')'''
 
-    args = parser.parse_args()
+    #args = parser.parse_args()
+    args, unknown = parser.parse_known_args()
 
     dataset = args.dataset
     stage = args.stage
@@ -274,7 +298,6 @@ def __main__():
     decayRate = args.decayRate
     memSize = args.memSize
 
-    main_run(dataset, stage, trainDatasetDir, valDatasetDir, stage1Dict, outDir, seqLen, trainBatchSize,
-             valBatchSize, numEpochs, lr1, decayRate, stepSize, memSize)
+    main_run(dataset, stage, trainDatasetDir, valDatasetDir, stage1Dict, outDir, seqLen, trainBatchSize, valBatchSize, numEpochs, lr1, decayRate, stepSize, memSize)
 
 __main__()

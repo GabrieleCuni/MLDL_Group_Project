@@ -12,7 +12,7 @@ import sys
 
 def main_run(dataset, trainDir, valDir, outDir, stackSize, trainBatchSize, valBatchSize, numEpochs, lr1,
              decay_factor, decay_step):
-#definisce il numero di classi in relazione al dataset in utilizzo
+
 
     if dataset == 'gtea61':
         num_classes = 61
@@ -27,12 +27,13 @@ def main_run(dataset, trainDir, valDir, outDir, stackSize, trainBatchSize, valBa
         sys.exit()
 
     min_accuracy = 0
-#crea la directory e le sotto directory per salvarsi il modello e i file di log ( penso si  tratti di accuracy e loss) 
+
     model_folder = os.path.join('./', outDir, dataset, 'flow')  # Dir for saving models and log files
     # Create the dir
     if os.path.exists(model_folder):
         print('Dir {} exists!'.format(model_folder))
-        sys.exit()
+        !rm -rf ./experiments
+        #sys.exit()
     os.makedirs(model_folder)
 
     # Log files
@@ -42,28 +43,27 @@ def main_run(dataset, trainDir, valDir, outDir, stackSize, trainBatchSize, valBa
     val_log_loss = open((model_folder + '/val_log_loss.txt'), 'w')
     val_log_acc = open((model_folder + '/val_log_acc.txt'), 'w')
 
-#Preprocessing e normalizzazione dati secondo il pretraining su ImageNet, fa anche data augmentation, ESATTAMENTE come nel main-run-RGB 
+
     # Data loader
     normalize = Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 
     spatial_transform = Compose([Scale(256), RandomHorizontalFlip(), MultiScaleCornerCrop([1, 0.875, 0.75, 0.65625], 224),
                                  ToTensor(), normalize])
-#creazione oggetto Makedataset in cui ho i tensori di TRAINING warp/flow su X e Y, le labels e il numero di frame(non mi proprio ben chiarissima la differenza, warp penso sia perchè conti
-#la deformazione dovuta al movimento della ego-camera
+
     vid_seq_train = makeDataset(trainDir, spatial_transform=spatial_transform, sequence=False,
-                                stackSize=stackSize, fmt='.jpg')
-#zz
+                                stackSize=stackSize, fmt='.png')
+
     train_loader = torch.utils.data.DataLoader(vid_seq_train, batch_size=trainBatchSize,
                             shuffle=True, sampler=None, num_workers=4, pin_memory=True)
+    valInstances=0
     if valDir is not None:
 
         vid_seq_val = makeDataset(valDir, spatial_transform=Compose([Scale(256), CenterCrop(224), ToTensor(), normalize]),
-                                   sequence=False, stackSize=stackSize, fmt='.jpg', phase='Test')
+                                   sequence=False, stackSize=stackSize, fmt='.png', phase='Test')
 
         val_loader = torch.utils.data.DataLoader(vid_seq_val, batch_size=valBatchSize,
                                 shuffle=False, num_workers=2, pin_memory=True)
         valInstances = vid_seq_val.__len__()
-
 
     trainInstances = vid_seq_train.__len__()
     print('Number of samples in the dataset: training = {} | validation = {}'.format(trainInstances, valInstances))
@@ -155,7 +155,7 @@ def main_run(dataset, trainDir, valDir, outDir, stackSize, trainBatchSize, valBa
 def __main__():
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset', type=str, default='gtea61', help='Dataset')
-    parser.add_argument('--trainDatasetDir', type=str, default='./dataset/gtea_warped_flow_61/split2/train',
+    parser.add_argument('--trainDatasetDir', type=str, default='./GTEA61',
                         help='Train set directory')
     parser.add_argument('--valDatasetDir', type=str, default=None,
                         help='Validation set directory')
@@ -168,7 +168,8 @@ def __main__():
     parser.add_argument('--stepSize', type=float, default=[150, 300, 500], nargs="+", help='Learning rate decay step')
     parser.add_argument('--decayRate', type=float, default=0.5, help='Learning rate decay rate')
 
-    args = parser.parse_args()
+    #args = parser.parse_args()
+    args, unknown = parser.parse_known_args()
 
     dataset = args.dataset
     trainDatasetDir = args.trainDatasetDir
